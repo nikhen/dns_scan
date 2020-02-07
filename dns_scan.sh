@@ -24,13 +24,20 @@ function check_arguments() {
 }
 
 function run_port_scan() {
-    echo "Running port scans on dns port"
+    echo "Running port scans on dns port" $port
 
-    nmap -sSU -p $port --script dns-nsid $ip
+    nmap -sSU -p $port --script=dns-nsid.nse $ip
+    nmap -sSU -p $port --script=dns-srv-enum.nse $ip
+    nmap -sSU -p $port --script=dns-fuzz.nse $ip
+    nmap -sSU -p $port --script=dns-update.nse $ip
+    nmap -sSU -p $port --script=dns-ip6-arpa-scan.nse $ip
+    nmap -sSU -p $port --script=dns-zeustracker.nse $ip
+    nmap -sSU -p $port --script=dns-nsec3-enum.nse $ip
+    nmap -sSU -p $port --script=dns-zone-transfer.nse $ip
 }
 
 function display_result() {
-    echo "Print result"
+    echo "Done."
 }
 
 function main() {
