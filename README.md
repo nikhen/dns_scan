@@ -15,8 +15,8 @@ Common DNS misconfigurations are reported.
 
 In the parent directory of this project, run
 
-     bash dns_scan.sh IP_ADDRESS PORT_NUMBER
+     bash dns_scan.sh IP_ADDRESS PORT_NUMBER HOSTNAME
 
-where *IP_ADDRESS* is a valid ip address and *PORT_NUMBER* an integer.
+where *IP_ADDRESS* is a valid ip address, *PORT_NUMBER* an integer and *HOSTNAME* the hostname.
 
 Ideally, this corresponds to an open port - most likely 53 - discovered in previous nmap exploration.
