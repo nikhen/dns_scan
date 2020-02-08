@@ -7,10 +7,14 @@ function print_usage_disclaimer() {
 	echo ""
 }
 
+function print_variable() {
+    echo $1 $2"."
+}
+
 function check_arguments() {
     if [ $# -eq 3 ]; then
         if [[ $2 =~ ^-?[0-9]+$ ]]; then
-            echo "Scanning port" $2
+            print_variable "Scanning port" $2
         else
             print_usage_disclaimer
             echo "PORT_NUMBER has to be integer."
@@ -26,15 +30,14 @@ function check_arguments() {
 function run_port_scan() {
     local timelimit=5m
 
-    echo "Running port scans on dns port" $port
-    echo "Timelimit is set to" $timelimit
+    print_variable "Timelimit is set to" $timelimit
 
     nmap -sSU -p $port --script=dns-nsid.nse $ip
     nmap -sSU -p $port --script=dns-update.nse --script-args=dns-update.hostname=dnswizard.com,dns-update.ip=192.0.2.1 $ip
     nmap -sn -PN --script=dns-zeustracker $ip
     nmap -sSU -p $port --script=dns-nsec3-enum.nse --script-args dns-nsec3-enum.domains=$domain $ip
     nmap -sSU -p $port --script=dns-zone-transfer.nse $ip
-    nmap --script=dns-srv-enum.nse --script-args "dns-srv-enum.domain="$domain $ip -v
+    nmap -sn --script=dns-srv-enum.nse --script-args "dns-srv-enum.domain="$domain $ip
     nmap -sSU -p $port --script=dns-fuzz.nse $ip --script-args timelimit=$timelimit
 }
 
@@ -47,7 +50,8 @@ function main() {
     local port=$2
     local domain=$3
 
-    echo "Starting Test Scan for IP" $ip $port ". Domain name is" $domain
+    print_variable "Scanning IP" $ip 
+    print_variable "Domain name is" $domain
 
     check_arguments $ip $port $domain
  
