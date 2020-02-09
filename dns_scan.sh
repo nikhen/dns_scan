@@ -40,7 +40,7 @@ function run_port_scan() {
     nmap -sSU -p $port --script=dns-nsec3-enum.nse --script-args dns-nsec3-enum.domains=$domain $ip
     nmap -sSU -p $port --script=dns-zone-transfer.nse $ip
     nmap -sn --script=dns-srv-enum.nse --script-args $enum_script_arguments $ip
-    nmap -sSU -p $port --script=dns-fuzz.nse $ip --script-args $dns_fuzz_arguments
+    nmap $ip -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
 }
 
 function display_result() {
