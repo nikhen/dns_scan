@@ -9,6 +9,7 @@ function print_usage_disclaimer() {
 }
 
 function get_nameserver() {
+    print_variable "Getting nameserver record for " $domain
     NAMESERVER_RECORD=$(dig ns $domain +short | grep -m1 "")
     local FOUND_NAMESERVER_RECORD=$(echo $NAMESERVER_RECORD | wc -m)
 
@@ -27,41 +28,52 @@ function print_variable() {
     echo $(date) ":" $1 $2"."
 }
 
+function announce_port_scan() {
+    echo ""
+    echo $(date) ":" $1
+}
+
 function print_separator() {
     echo ""
 }
 
 function run_port_scan() {
     local target=$NAMESERVER_RECORD
-    local timelimit=5m
+    local dns_fuzzing_timelimit=5m
     local enum_script_arguments="dns-srv-enum.domain="$domain
-    local dns_fuzz_arguments="timelimit="$timelimit
+    local dns_fuzz_arguments="timelimit="$dns_fuzzing_timelimit
     local dns_update_arguments="dns-update.hostname=dnswizard.com,dns-update.ip=192.0.2.1"
     local port=53
 
-    print_variable "Fuzzing timelimit is set to" $timelimit
+    print_variable "Fuzzing timelimit is set to" $dns_fuzzing_timelimit
     print_variable "Domain from input is" $domain
     print_separator
 
+    announce_port_scan "Obtaining nameserver identifier information."
     nmap -sSU -p $port --script dns-nsid.nse $target
-    print_separator
+
+    announce_port_scan "Trying DNS update."
     nmap -sU -p $port --script=dns-update --script-args=$dns_update_arguments $target
-    print_separator
+
+    announce_port_scan "Checking zeustracker."
     nmap -sn -PN --script=dns-zeustracker $target --open
-    print_separator
-    nmap -sU -p $port $target --script=dns-nsec3-enum.nse --script-args dns-nsec3-enum.domains=$domain
-    print_separator
+ 
+    announce_port_scan "NSEC3 Enumeration."
+    nmap -sU -p $port $target --script=dns-nsec3-enum
+
+    announce_port_scan "Checking zone transfer vulnerability."
     nmap -sSU -p $port --script=dns-zone-transfer.nse $target
-    print_separator
+
+    announce_port_scan "Service enumeration."
     nmap --script=dns-srv-enum --script-args $enum_script_arguments
-    print_separator
 
-    print_variable "Starting dns fuzzing with timeout set to " $timelimit
+    print_separator
+    print_variable "Starting dns fuzzing with timeout set to " $dns_fuzzing_timelimit
     nmap $target -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
-    print_separator
+    
+    announce_port_scan "Starting port scan to identify additional services."
+    nmap -sSU $target -oN $NMAP_RESULT_FILE --open
 
-    echo $(date) "Starting port scan to identify services."
-    nmap -A $target -oN $NMAP_RESULT_FILE --open
     echo $(date) "Port scan finished."
     print_separator
 }

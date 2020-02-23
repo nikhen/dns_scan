@@ -43,3 +43,36 @@ in mind, but it will make using this tool much more accessible, as all you need 
 It is assumed that it is sufficient to run all the scans on one of the nameservers identified. Therefore, the tool is particularly suited
 to check general configurations common to multiple nameserver instances. It is not suited to monitor each and every single instance.
 This should be kept in mind when interpreting scan results.
+
+So let's get started and hdive deeper into the scans performed and their interpretation.
+
+#### dns-nsid
+The script retrieves the following information from the nameserver: nameserver id (nsid), server id (id.server) and version id (version.bind).
+This information shows you which particular nameserver instance you are connected.
+#### dns-update
+An unauthenticated update of DNS records is triggered. You don't want this to be possible if you are the owner of the nameserver. To check for this
+vulnerability, the script is configured to use bogus hostname and ip address. If successful, an attacker might be able to manipulate the
+existing configuration.
+#### dns-zeustracker
+This script checks if the ip address corresponding to the targeted server is part of a Zeus botnet. More information is available 
+[here](https://zeustracker.abuse.ch/ztdns.php).
+#### dns-nsec3-enum
+The script tries to identify nonexistant domains using a technique called [NSEC3 walking](https://nmap.org/nsedoc/scripts/dns-nsec3-enum.html).
+Findings will be in the form of hashes which will have to be dealt with using an offlie cracking tool.
+#### dns-zone-transfer
+Checks the name server for a zone transfer vulnerability. Any potential information find will be printed on the screen. You don't expect output here.
+As an administrator or nameserver owner, you don't want output here for anyone.
+If you find something, dig deeper.
+#### dns-srv-enum
+Tries to enumerate various common services and their port numbers for a given domain. Findings may be regarded as informational or
+a starting point for further exploration.
+#### dns-fuzz
+This launches a DNS fuzzing attack against the targeted DNS server by introducing small errors in otherwise valid DNS requests.
+Timelimit for fuzzing is set to 5m which is quite low for obtaining results, but quite high if you are in an environment where you 
+probably shouldn't be fuzzing at all. Modify variable *dns_fuzzing_timelimit* in *dns_scan.sh* to change the value to your needs.
+
+#### Aggressive Port Scan
+An aggressive port scan (*nmap -A*) on 1000 most popular tcp ports is performed to identify services on top of DNS that are running on the nameserver.
+The results of this scan are used as a starting point for a brute force attack using brutespray. This way, possible vulnerabilities in these
+services can be identified. If brutespray is not installed, this step is skipped.
+
