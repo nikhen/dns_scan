@@ -47,7 +47,6 @@ function run_port_scan() {
 
     print_variable "Fuzzing timelimit is set to" $dns_fuzzing_timelimit
     print_variable "Domain from input is" $domain
-    print_separator
 
     announce_port_scan "Obtaining nameserver identifier information."
     nmap -sSU -p $port --script dns-nsid.nse $target
@@ -72,7 +71,7 @@ function run_port_scan() {
     nmap $target -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
     
     announce_port_scan "Starting port scan to identify additional services."
-    nmap -sSU $target -oN $NMAP_RESULT_FILE --open
+    nmap -A $target -oN $NMAP_RESULT_FILE --open
 
     echo $(date) "Port scan finished."
     print_separator
