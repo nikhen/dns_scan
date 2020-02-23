@@ -2,21 +2,21 @@
 
 This is a script to target open DNS ports using nmap scripts.
 
-The script takes an IP address and port number as arguments and runs nmap UDP and TCP scans against this port.
+The script takes a domain name as argument, locates one of the corresponding nameservers,  and runs nmap UDP and TCP scans against this port.
 
 Common DNS misconfigurations are reported.
+
+If a brutespray installation is detected, discovered services are targeted for a brute-force attack.
 
 #### Prerequisites
 
 1. Nmap installation (i.e. typing nmap into your terminal should work)
-2. bash
+2. [OPTIONAL]: brutespray installation
 
 #### Usage
 
 In the parent directory of this project, run
 
-     bash dns_scan.sh IP_ADDRESS PORT_NUMBER HOSTNAME
+     bash dns_scan.sh HOSTNAME
 
-where *IP_ADDRESS* is a valid ip address, *PORT_NUMBER* an integer and *HOSTNAME* the hostname.
-
-Ideally, this corresponds to an open port - most likely 53 - discovered in previous nmap exploration.
+where *HOSTNAME* is the target's hostname.

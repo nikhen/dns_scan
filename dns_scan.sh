@@ -3,10 +3,24 @@
 NMAP_RESULT_FILE=dns_scan_$(date --iso-8601=s).gnmap
 
 function print_usage_disclaimer() {
-        echo "Please run this script with three command line arguments."
         echo "Usage:"
-        echo "    bash dns_scan.sh IP_ADDRESS PORT_NUMBER HOSTNAME"
+        echo "    bash dns_scan.sh HOSTNAME"
 	echo ""
+}
+
+function get_nameserver() {
+    NAMESERVER_RECORD=$(dig ns $domain +short | grep -m1 "")
+    local FOUND_NAMESERVER_RECORD=$(echo $NAMESERVER_RECORD | wc -m)
+
+    if [ $FOUND_NAMESERVER_RECORD -gt 1 ]
+    then
+        NAMESERVER_RECORD=$(echo $NAMESERVER_RECORD | sed 's/.$//')
+        print_variable "Found nameserver record: " $NAMESERVER_RECORD
+    else
+        print_variable "Error: Could not find nameserver record for domain " $domain
+        print_usage_disclaimer
+        exit 1
+    fi
 }
 
 function print_variable() {
@@ -17,51 +31,34 @@ function print_separator() {
     echo ""
 }
 
-function check_arguments() {
-    if [ $# -eq 3 ]; then
-        if [[ $2 =~ ^-?[0-9]+$ ]]; then
-            print_variable "Scanning port" $2
-        else
-            print_usage_disclaimer
-            echo "PORT_NUMBER has to be integer."
-            exit 1
-        fi
-    else
-        echo $# "command line arguments."
-        print_usage_disclaimer
-        exit 1
-    fi
-}
-
 function run_port_scan() {
+    local target=$NAMESERVER_RECORD
     local timelimit=5m
     local enum_script_arguments="dns-srv-enum.domain="$domain
     local dns_fuzz_arguments="timelimit="$timelimit
     local dns_update_arguments="dns-update.hostname=dnswizard.com,dns-update.ip=192.0.2.1"
+    local port=53
 
     print_variable "Fuzzing timelimit is set to" $timelimit
+    print_variable "domain" $domain
     print_separator
 
-    nmap -sSU -p $port --script dns-nsid.nse $ip
+    nmap -sSU -p $port --script dns-nsid.nse $target
     print_separator
-    nmap -sU -p $port --script=dns-update --script-args=$dns_update_arguments $ip
+    nmap -sU -p $port --script=dns-update --script-args=$dns_update_arguments $target
     print_separator
-    nmap -sn -PN --script=dns-zeustracker $ip
+    nmap -sn -PN --script=dns-zeustracker $target --open
     print_separator
-    nmap -p $port --script=dns-nsec3-enum.nse --script-args dns-nsec3-enum.domains=$domain $ip
+    nmap -p $port --script=dns-nsec3-enum.nse --script-args dns-nsec3-enum.domains=$domain $target
     print_separator
-    nmap -sSU -p $port --script=dns-zone-transfer.nse $ip -oN $NMAP_RESULT_FILE
+    nmap -sSU -p $port --script=dns-zone-transfer.nse $target -oN $NMAP_RESULT_FILE
     print_separator
     nmap --script=dns-srv-enum --script-args $enum_script_arguments
     print_separator
-    nmap $ip -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
+    nmap $target -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
     print_separator
     echo "Port scan finished."
     print_separator
-}
-
-function display_result() {
-    echo "Done."
 }
 
 function crack_services() {
@@ -83,22 +80,15 @@ function clean_up() {
 }
 
 function main() {
-    local ip=$1
-    local port=$2
-    local domain=$3
+    local domain=$1
 
-    print_variable "Scanning IP" $ip 
-    print_variable "Domain name is" $domain
-
-    check_arguments $ip $port $domain
+    get_nameserver
  
-    run_port_scan $ip $port $domain
+    run_port_scan
 
     crack_services
-
-    display_result
 
     clean_up
 }
 
-main $1 $2 $3
+main $1
