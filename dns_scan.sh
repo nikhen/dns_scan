@@ -30,7 +30,7 @@ function print_variable() {
 
 function announce_port_scan() {
     echo ""
-    echo $(date) ":" $1
+    echo $(date) ":" $(tput setaf 6) $1 $(tput sgr0)
 }
 
 function print_separator() {
@@ -70,11 +70,7 @@ function run_port_scan() {
     print_variable "Starting dns fuzzing with timeout set to " $dns_fuzzing_timelimit
     nmap $target -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
     
-    announce_port_scan "Starting port scan to identify additional services."
-    nmap -A $target -oN $NMAP_RESULT_FILE --open
-
     echo $(date) "Port scan finished."
-    print_separator
 }
 
 function crack_services() {
@@ -82,6 +78,8 @@ function crack_services() {
 
     if [ $IS_BRUTESPRAY_AVAILABLE -gt 0 ]
     then
+        announce_port_scan "Starting port scan to identify additional services."
+        nmap -sSU $target -oN $NMAP_RESULT_FILE --open
         brutespray -f $NMAP_RESULT_FILE
     else
         echo "Install brutespray to try to crack services."
@@ -102,7 +100,7 @@ function main() {
  
     run_port_scan
 
-    crack_services
+#    crack_services
 
     clean_up
 }
