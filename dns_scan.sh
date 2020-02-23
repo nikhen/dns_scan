@@ -1,5 +1,7 @@
 #!/bin/bash
 
+NMAP_RESULT_FILE=dns_scan_$(date --iso-8601=s).gnmap
+
 function print_usage_disclaimer() {
         echo "Please run this script with three command line arguments."
         echo "Usage:"
@@ -9,6 +11,10 @@ function print_usage_disclaimer() {
 
 function print_variable() {
     echo $1 $2"."
+}
+
+function print_separator() {
+    echo ""
 }
 
 function check_arguments() {
@@ -31,20 +37,49 @@ function run_port_scan() {
     local timelimit=5m
     local enum_script_arguments="dns-srv-enum.domain="$domain
     local dns_fuzz_arguments="timelimit="$timelimit
+    local dns_update_arguments="dns-update.hostname=dnswizard.com,dns-update.ip=192.0.2.1"
 
-    print_variable "Timelimit is set to" $timelimit
+    print_variable "Fuzzing timelimit is set to" $timelimit
+    print_separator
 
-    nmap -sSU -p $port --script=dns-nsid.nse $ip
-    nmap -sSU -p $port --script=dns-update.nse --script-args=dns-update.hostname=dnswizard.com,dns-update.ip=192.0.2.1 $ip
+    nmap -sSU -p $port --script dns-nsid.nse $ip
+    print_separator
+    nmap -sU -p $port --script=dns-update --script-args=$dns_update_arguments $ip
+    print_separator
     nmap -sn -PN --script=dns-zeustracker $ip
-    nmap -sSU -p $port --script=dns-nsec3-enum.nse --script-args dns-nsec3-enum.domains=$domain $ip
-    nmap -sSU -p $port --script=dns-zone-transfer.nse $ip
-    nmap -sn --script=dns-srv-enum.nse --script-args $enum_script_arguments $ip
+    print_separator
+    nmap -p $port --script=dns-nsec3-enum.nse --script-args dns-nsec3-enum.domains=$domain $ip
+    print_separator
+    nmap -sSU -p $port --script=dns-zone-transfer.nse $ip -oN $NMAP_RESULT_FILE
+    print_separator
+    nmap --script=dns-srv-enum --script-args $enum_script_arguments
+    print_separator
     nmap $ip -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
+    print_separator
+    echo "Port scan finished."
+    print_separator
 }
 
 function display_result() {
     echo "Done."
+}
+
+function crack_services() {
+    local IS_BRUTESPRAY_AVAILABLE=$(command -v brutespray | wc -l)
+
+    if [ $IS_BRUTESPRAY_AVAILABLE -gt 0 ]
+    then
+        brutespray -f $NMAP_RESULT_FILE
+    else
+        echo "Install brutespray to try to crack services."
+        echo "    apt install brutespray"
+        print_separator
+    fi
+}
+
+function clean_up() {
+    rm $NMAP_RESULT_FILE
+    rm -r brutespray-output
 }
 
 function main() {
@@ -59,7 +94,11 @@ function main() {
  
     run_port_scan $ip $port $domain
 
+    crack_services
+
     display_result
+
+    clean_up
 }
 
 main $1 $2 $3
