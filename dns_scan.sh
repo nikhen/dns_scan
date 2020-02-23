@@ -66,17 +66,15 @@ function run_port_scan() {
     announce_port_scan "Service enumeration."
     nmap --script=dns-srv-enum --script-args $enum_script_arguments
 
-    announce_port_scan "Brute force hostname guessing."
-    nmap --script dns-brute $target
+    announce_port_scan "Forward-confirmed Reverse DNS lookup."
+    nmap -sn -Pn --script fcrdns $target
 
     announce_port_scan "Brute force hostname guessing."
-    nmap --script=dns-brute $target
+    nmap --script=dns-brute $target 
 
     print_separator
     print_variable "Starting dns fuzzing with timeout set to " $dns_fuzzing_timelimit
     nmap $target -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
-    
-    echo $(date) "Port scan finished."
 }
 
 function crack_services() {

@@ -70,6 +70,9 @@ If you find something, dig deeper.
 Tries to enumerate various common services and their port numbers for a given domain. Findings may be regarded as informational or
 a starting point for further exploration.
 
+### fcrdns
+Reports anomaluos results performing a so-called "forward-confirmed reverse DNS lookup" (It's on (wikipedia)[https://en.wikipedia.org/wiki/Forward-confirmed_reverse_DNS] if something pops up...).
+
 ### dns-brute
 Enumerates hostnames by guessing subdomain names.
 
