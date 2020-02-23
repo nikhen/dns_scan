@@ -40,7 +40,7 @@ function run_port_scan() {
     local port=53
 
     print_variable "Fuzzing timelimit is set to" $timelimit
-    print_variable "domain" $domain
+    print_variable "Domain from input is" $domain
     print_separator
 
     nmap -sSU -p $port --script dns-nsid.nse $target
@@ -51,12 +51,13 @@ function run_port_scan() {
     print_separator
     nmap -p $port --script=dns-nsec3-enum.nse --script-args dns-nsec3-enum.domains=$domain $target
     print_separator
-    nmap -sSU -p $port --script=dns-zone-transfer.nse $target -oN $NMAP_RESULT_FILE
+    nmap -sSU -p $port --script=dns-zone-transfer.nse $target
     print_separator
     nmap --script=dns-srv-enum --script-args $enum_script_arguments
     print_separator
     nmap $target -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
     print_separator
+    nmap -A $target -oN $NMAP_RESULT_FILE --open
     echo "Port scan finished."
     print_separator
 }
