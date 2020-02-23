@@ -25,7 +25,7 @@ function get_nameserver() {
 }
 
 function print_variable() {
-    echo $(date) ":" $1 $2"."
+    echo $(date) ":" $1 $(tput setaf 2)$2$(tput sgr0)"."
 }
 
 function announce_port_scan() {
@@ -81,6 +81,7 @@ function crack_services() {
         announce_port_scan "Starting port scan to identify additional services."
         nmap -sSU $target -oN $NMAP_RESULT_FILE --open
         brutespray -f $NMAP_RESULT_FILE
+        clean_up
     else
         echo "Install brutespray to try to crack services."
         echo "    apt install brutespray"
@@ -101,8 +102,6 @@ function main() {
     run_port_scan
 
 #    crack_services
-
-    clean_up
 }
 
 main $1
