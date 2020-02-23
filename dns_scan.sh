@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NMAP_RESULT_FILE=dns_scan_$(date --iso-8601=s).gnmap
+NMAP_RESULT_FILE=_dns_scan_$(date --iso-8601=s).gnmap
 
 function print_usage_disclaimer() {
         echo "Usage:"
@@ -24,7 +24,7 @@ function get_nameserver() {
 }
 
 function print_variable() {
-    echo $1 $2"."
+    echo $(date) ":" $1 $2"."
 }
 
 function print_separator() {
@@ -49,16 +49,19 @@ function run_port_scan() {
     print_separator
     nmap -sn -PN --script=dns-zeustracker $target --open
     print_separator
-    nmap -p $port --script=dns-nsec3-enum.nse --script-args dns-nsec3-enum.domains=$domain $target
+    nmap -p $port --script=dns-nsec3-enum.nse --script-args=dns-nsec3-enum.domains=$domain $target
     print_separator
     nmap -sSU -p $port --script=dns-zone-transfer.nse $target
     print_separator
     nmap --script=dns-srv-enum --script-args $enum_script_arguments
     print_separator
+
+    print_variable "Starting dns fuzzing with timeout set to " $timelimit
     nmap $target -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
     print_separator
+
     nmap -A $target -oN $NMAP_RESULT_FILE --open
-    echo "Port scan finished."
+    echo $(date) "Port scan finished."
     print_separator
 }
 
