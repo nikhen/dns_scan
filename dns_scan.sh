@@ -49,7 +49,7 @@ function run_port_scan() {
     print_separator
     nmap -sn -PN --script=dns-zeustracker $target --open
     print_separator
-    nmap -p $port --script=dns-nsec3-enum.nse --script-args=dns-nsec3-enum.domains=$domain $target
+    nmap -sU -p $port $target --script=dns-nsec3-enum.nse --script-args dns-nsec3-enum.domains=$domain
     print_separator
     nmap -sSU -p $port --script=dns-zone-transfer.nse $target
     print_separator
@@ -60,6 +60,7 @@ function run_port_scan() {
     nmap $target -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
     print_separator
 
+    echo $(date) "Starting port scan to identify services."
     nmap -A $target -oN $NMAP_RESULT_FILE --open
     echo $(date) "Port scan finished."
     print_separator
