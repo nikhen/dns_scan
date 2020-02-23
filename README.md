@@ -70,6 +70,9 @@ If you find something, dig deeper.
 Tries to enumerate various common services and their port numbers for a given domain. Findings may be regarded as informational or
 a starting point for further exploration.
 
+### dns-brute
+Enumerates hostnames by guessing subdomain names.
+
 ### dns-fuzz
 This launches a DNS fuzzing attack against the targeted DNS server by introducing small errors in otherwise valid DNS requests.
 Timelimit for fuzzing is set to 5m which is quite low for obtaining results, but quite high if you are in an environment where you 
