@@ -103,8 +103,6 @@ function run_port_scan() {
     announce_port_scan "Brute force hostname guessing."
     run_filtered_port_scan "" "--script dns-brute" $target
 
-    exit 1
-
     print_variable "Starting dns fuzzing with timeout set to " $dns_fuzzing_timelimit
     nmap $target -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
 }
