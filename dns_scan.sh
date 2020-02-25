@@ -7,6 +7,7 @@ function print_usage_disclaimer() {
         echo "    -d HOSTNAME: set hostname of single target"
         echo "    -f FILE_LOCATION: set location of a file containing additional hostnames (one per line)"
         echo "    -m MAXIMUM_TARGETS: set maximum number of targets (default: 1000)"
+        echo "    -v: verbose output"
         echo "    -h: show this help"
 }
 
@@ -63,11 +64,15 @@ function print_separator() {
     echo ""
 }
 
-function run_filtered_port_scan() {
-     nmap $1 $2 $3 $4 | sed s/Starting.*// | sed s/Host.*// | sed s/Nmap.*// | sed s/PORT.*// | sed s/53.*// | sed /^$/d
+function run_port_scan() {
+    if [ $VERBOSITY -gt 0 ]; then
+        nmap $1 $2 $3 $4 -v
+    else
+        nmap $1 $2 $3 $4 | sed s/Starting.*// | sed s/Host.*// | sed s/Nmap.*// | sed s/PORT.*// | sed s/53.*// | sed /^$/d
+    fi
 }
 
-function run_port_scan() {
+function run_port_scans() {
     local domain=$1
     local target=$NAMESERVER_RECORD
     local dns_fuzzing_timelimit=5m
@@ -80,31 +85,31 @@ function run_port_scan() {
     print_variable "Domain from input is" $domain
 
     announce_port_scan "Obtaining nameserver identifier information."
-    run_filtered_port_scan -sSU "--script dns-nsid.nse" $target "-p "$port
+    run_port_scan -sSU "--script dns-nsid.nse" $target "-p "$port
 
     announce_port_scan "Trying DNS update."
-    run_filtered_port_scan -sU "--script=dns-update --script-args="$dns_update_arguments $target "-p "$port
+    run_port_scan -sU "--script=dns-update --script-args="$dns_update_arguments $target "-p "$port
 
     announce_port_scan "Checking zeustracker."
-    run_filtered_port_scan "-sn -PN" "--script=dns-zeustracker" $target
+    run_port_scan "-sn -PN" "--script=dns-zeustracker" $target
  
     announce_port_scan "NSEC3 Enumeration."
-    run_filtered_port_scan -sU "--script=dns-nsec3-enum" $target "-p "$port
+    run_port_scan -sU "--script=dns-nsec3-enum" $target "-p "$port
 
     announce_port_scan "Checking zone transfer vulnerability."
-    run_filtered_port_scan -sSU "--script=dns-zone-transfer.nse" $target "-p "$port
+    run_port_scan -sSU "--script=dns-zone-transfer.nse" $target "-p "$port
 
     announce_port_scan "Service enumeration."
-    run_filtered_port_scan -sSU "--script=dns-srv-enum --script-args "$enum_script_arguments $target "-p "$port
+    run_port_scan -sSU "--script=dns-srv-enum --script-args "$enum_script_arguments $target "-p "$port
 
     announce_port_scan "Forward-confirmed Reverse DNS lookup."
-    run_filtered_port_scan "-sn -Pn" "--script fcrdns" $target
+    run_port_scan "-sn -Pn" "--script fcrdns" $target
 
     announce_port_scan "Brute force hostname guessing."
-    run_filtered_port_scan "" "--script dns-brute" $target
+    run_port_scan "" "--script dns-brute" $target
 
     print_variable "Starting dns fuzzing with timeout set to " $dns_fuzzing_timelimit
-    nmap $target -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
+    run_port_scan -sSU "--script=dns-fuzz.nse --script-args"$dns_fuzz_arguments $target -p $port
 }
 
 function crack_services() {
@@ -145,7 +150,7 @@ function iterate_over_targets() {
         print_global_progress $target_domain $n $number_of_targets
         get_nameserver $target_domain
         if [ $? -lt 50 ]; then
-            run_port_scan $target_domain
+            run_port_scans $target_domain
         else
             print_variable "Skipping port scan for domain" $target_domain
         fi
@@ -162,8 +167,9 @@ function main() {
 declare -a TARGET_LIST
 NMAP_RESULT_FILE=_dns_scan_$(date --iso-8601=s).gnmap
 MAXIMUM_TARGETS=100
+VERBOSITY=0
 
-while getopts "d:f:m:h" arg; do 
+while getopts "d:f:m:hv" arg; do 
   case ${arg} in
     d) 
       DOMAIN=${OPTARG}
@@ -181,6 +187,9 @@ while getopts "d:f:m:h" arg; do
     h)
       print_usage_disclaimer
       exit 1
+      ;;
+    v)
+      VERBOSITY=1
       ;;
   esac
 done
