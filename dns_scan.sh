@@ -1,14 +1,17 @@
 #!/bin/bash
 
-NMAP_RESULT_FILE=_dns_scan_$(date --iso-8601=s).gnmap
-
 function print_usage_disclaimer() {
-        echo "Usage:"
-        echo "    bash dns_scan.sh HOSTNAME"
+        echo "" && echo "Usage:"
+        echo "    bash dns_scan.sh [-d HOSTNAME] [-f FILE_LOCATION] [-m MAXIMUM_TARGETS] [-h]"
 	echo ""
+        echo "    -d HOSTNAME: set hostname of single target"
+        echo "    -f FILE_LOCATION: set location of a file containing additional hostnames (one per line)"
+        echo "    -m MAXIMUM_TARGETS: set maximum number of targets (default: 1000)"
+        echo "    -h: show this help"
 }
 
 function get_nameserver() {
+    local domain=$1
     print_variable "Getting nameserver record for " $domain
     NAMESERVER_RECORD=$(dig ns $domain +short | grep -m1 "")
     local FOUND_NAMESERVER_RECORD=$(echo $NAMESERVER_RECORD | wc -m)
@@ -18,29 +21,57 @@ function get_nameserver() {
         NAMESERVER_RECORD=$(echo $NAMESERVER_RECORD | sed 's/.$//')
         print_variable "Found nameserver record: " $NAMESERVER_RECORD
     else
-        print_variable "Error: Could not find nameserver record for domain " $domain
-        print_usage_disclaimer
-        exit 1
+        print_variable "Error: Could not find nameserver record for DOMAIN" $domain
+        echo "    Try 'dig ns" $domain"' to find possible clues."
+        return 51
     fi
 }
 
+function get_targets_from_file() {
+    if [ -z $INPUT_FILE_LOCATION ]; then
+        return 1
+    fi
+
+    local filename=$INPUT_FILE_LOCATION
+
+    local i=1
+    while read line; do
+        TARGET_LIST+=($line)
+        if [ ${#TARGET_LIST[@]} -ge $MAXIMUM_TARGETS ]
+        then
+            print_variable "Maximum number of targets: " $MAXIMUM_TARGETS
+            break
+        fi
+        i=$((i+1))
+    done < $filename
+}
+
 function print_variable() {
-    echo $(date) ":" $1 $(tput setaf 2)$2$(tput sgr0)"."
+    echo $(date)":" $1 $(tput setaf 2)$2$(tput sgr0)"."
 }
 
 function announce_port_scan() {
-    echo ""
-    echo $(date) ":" $(tput setaf 6) $1 $(tput sgr0)
+    echo $(date)":" $(tput setaf 6)$1$(tput sgr0)
+}
+
+function print_global_progress() {
+    print_separator
+    echo $(date)": Scanning domain ("$2"/"$3")"$(tput setaf 3) $1 $(tput sgr0)
 }
 
 function print_separator() {
     echo ""
 }
 
+function run_filtered_port_scan() {
+     nmap $1 $2 $3 $4 | sed s/Starting.*// | sed s/Host.*// | sed s/Nmap.*// | sed s/PORT.*// | sed s/53.*// | sed /^$/d
+}
+
 function run_port_scan() {
+    local domain=$1
     local target=$NAMESERVER_RECORD
     local dns_fuzzing_timelimit=5m
-    local enum_script_arguments="dns-srv-enum.domain="$domain
+    local enum_script_arguments="dns-srv-enum.DOMAIN="$domain
     local dns_fuzz_arguments="timelimit="$dns_fuzzing_timelimit
     local dns_update_arguments="dns-update.hostname=dnswizard.com,dns-update.ip=192.0.2.1"
     local port=53
@@ -49,30 +80,31 @@ function run_port_scan() {
     print_variable "Domain from input is" $domain
 
     announce_port_scan "Obtaining nameserver identifier information."
-    nmap -sSU -p $port --script dns-nsid.nse $target
+    run_filtered_port_scan -sSU "--script dns-nsid.nse" $target "-p "$port
 
     announce_port_scan "Trying DNS update."
-    nmap -sU -p $port --script=dns-update --script-args=$dns_update_arguments $target
+    run_filtered_port_scan -sU "--script=dns-update --script-args="$dns_update_arguments $target "-p "$port
 
     announce_port_scan "Checking zeustracker."
-    nmap -sn -PN --script=dns-zeustracker $target --open
+    run_filtered_port_scan "-sn -PN" "--script=dns-zeustracker" $target
  
     announce_port_scan "NSEC3 Enumeration."
-    nmap -sU -p $port $target --script=dns-nsec3-enum
+    run_filtered_port_scan -sU "--script=dns-nsec3-enum" $target "-p "$port
 
     announce_port_scan "Checking zone transfer vulnerability."
-    nmap -sSU -p $port --script=dns-zone-transfer.nse $target
+    run_filtered_port_scan -sSU "--script=dns-zone-transfer.nse" $target "-p "$port
 
     announce_port_scan "Service enumeration."
-    nmap --script=dns-srv-enum --script-args $enum_script_arguments
+    run_filtered_port_scan -sSU "--script=dns-srv-enum --script-args "$enum_script_arguments $target "-p "$port
 
     announce_port_scan "Forward-confirmed Reverse DNS lookup."
-    nmap -sn -Pn --script fcrdns $target
+    run_filtered_port_scan "-sn -Pn" "--script fcrdns" $target
 
     announce_port_scan "Brute force hostname guessing."
-    nmap --script=dns-brute $target 
+    run_filtered_port_scan "" "--script dns-brute" $target
 
-    print_separator
+    exit 1
+
     print_variable "Starting dns fuzzing with timeout set to " $dns_fuzzing_timelimit
     nmap $target -sSU -p $port --script=dns-fuzz.nse --script-args $dns_fuzz_arguments 
 }
@@ -98,14 +130,62 @@ function clean_up() {
     rm -r brutespray-output
 }
 
-function main() {
+function check_domain() {
     local domain=$1
-
-    get_nameserver
- 
-    run_port_scan
-
-#    crack_services
+    if [ -z $domain ]
+    then
+        print_usage_disclaimer
+        exit 1
+    fi
 }
 
-main $1
+function iterate_over_targets() {
+    number_of_targets=${#TARGET_LIST[@]}
+    n=1
+    for target_domain in "${TARGET_LIST[@]}"
+    do
+        print_global_progress $target_domain $n $number_of_targets
+        get_nameserver $target_domain
+        if [ $? -lt 50 ]; then
+            run_port_scan $target_domain
+        else
+            print_variable "Skipping port scan for domain" $target_domain
+        fi
+        n=$((n+1))
+    done
+}
+
+function main() {
+    get_targets_from_file
+    iterate_over_targets
+}
+
+# Processing input parameters; setting global variables
+declare -a TARGET_LIST
+NMAP_RESULT_FILE=_dns_scan_$(date --iso-8601=s).gnmap
+MAXIMUM_TARGETS=100
+
+while getopts "d:f:m:h" arg; do 
+  case ${arg} in
+    d) 
+      DOMAIN=${OPTARG}
+      check_domain $DOMAIN
+      TARGET_LIST[0]=$DOMAIN
+      print_variable "Added domain to targets:" $DOMAIN
+      ;;
+    f) 
+      INPUT_FILE_LOCATION=${OPTARG}
+      ;;
+    m) 
+      MAXIMUM_TARGETS=${OPTARG}
+      print_variable "Set maximum number of targets to " $MAXIMUM_TARGETS
+      ;;
+    h)
+      print_usage_disclaimer
+      exit 1
+      ;;
+  esac
+done
+
+# Call to main function
+main
