@@ -109,7 +109,7 @@ function run_port_scans() {
     run_port_scan "" "--script dns-brute" $target
 
     print_variable "Starting dns fuzzing with timeout set to " $dns_fuzzing_timelimit
-    run_port_scan -sSU "--script=dns-fuzz.nse --script-args="$dns_fuzz_arguments $target -p $port
+    run_port_scan -sSU "--script=dns-fuzz.nse --script-args="$dns_fuzz_arguments $target "-p"$port
 }
 
 function crack_services() {
