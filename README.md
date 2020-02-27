@@ -8,7 +8,6 @@ Here are a few instructions you will find helpful to start checking nameservers.
 It is assumed that you are runnning in a linux environment. Currently, this script requires the bash shell to run.
 With a few twists and turns, other environments might be realistic. In addition, the following libraries are required:
 1. Nmap installation (i.e. typing nmap into your terminal should work)
-2. [OPTIONAL]: brutespray installation
 
 If these prerequisites are met, you may clone this repository and change to the parent directory (i.e. the directory where this file is located on your machine.)
 
@@ -54,7 +53,7 @@ So let's get started and dive deeper into the scans performed and their interpre
 
 ### dns-nsid
 The script retrieves the following information from the nameserver: nameserver id (nsid), server id (id.server) and version id (version.bind).
-This information shows you which particular nameserver instance you are connected.
+This information shows you which particular nameserver instance you are connected. The value of version.bind might reveal information on outdated server components containing known vulnerabilities.
 
 ### dns-update
 An unauthenticated update of DNS records is triggered. You don't want this to be possible if you are the owner of the nameserver. To check for this
@@ -80,6 +79,9 @@ a starting point for further exploration.
 
 ### fcrdns
 Reports anomaluos results performing a so-called "forward-confirmed reverse DNS lookup" (Look [here](https://en.wikipedia.org/wiki/Forward-confirmed_reverse_DNS) if something unusual pops up...).
+
+### Amplification vulnerability
+The nameserver might be vulnerable to a [denial of service attack](https://isc.sans.edu/diary/DNS+queries+for+/5713). This is the case if this check generates substantial output. If you find something, you might verify using the online tool given in above reference.
 
 ### dns-brute
 Enumerates hostnames by guessing subdomain names.

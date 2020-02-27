@@ -22,7 +22,7 @@ function get_nameserver() {
         NAMESERVER_RECORD=$(echo $NAMESERVER_RECORD | sed 's/.$//')
         print_variable "Found nameserver record: " $NAMESERVER_RECORD
     else
-        print_variable "Error: Could not find nameserver record for DOMAIN" $domain
+        print_variable "Error: Could not find nameserver record for domain" $domain
         echo "    Try 'dig ns" $domain"' to find possible clues."
         return 51
     fi
@@ -105,32 +105,22 @@ function run_port_scans() {
     announce_port_scan "Forward-confirmed Reverse DNS lookup."
     run_port_scan "-sn -Pn" "--script fcrdns" $target
 
+    check_amplification_vulnerability 
+
     announce_port_scan "Brute force hostname guessing."
-    run_port_scan "" "--script dns-brute" $target
+    run_port_scan -sn "--script dns-brute" $target
 
     print_variable "Starting dns fuzzing with timeout set to " $dns_fuzzing_timelimit
     run_port_scan -sSU "--script=dns-fuzz.nse --script-args="$dns_fuzz_arguments $target "-p"$port
 }
 
-function crack_services() {
-    local IS_BRUTESPRAY_AVAILABLE=$(command -v brutespray | wc -l)
-
-    if [ $IS_BRUTESPRAY_AVAILABLE -gt 0 ]
-    then
-        announce_port_scan "Starting port scan to identify additional services."
-        nmap -sSU $target -oN $NMAP_RESULT_FILE --open
-        brutespray -f $NMAP_RESULT_FILE
-        clean_up
-    else
-        echo "Install brutespray to try to crack services."
-        echo "    apt install brutespray"
-        print_separator
-    fi
+function check_amplification_vulnerability() {
+    announce_port_scan "Checking for DNS amplification vulnerability of "$NAMESERVER_RECORD
+    dig . NS @$NAMESERVER_RECORD | sed s/^[\;].*$// | sed /^$/d
 }
 
 function clean_up() {
     rm $NMAP_RESULT_FILE
-    rm -r brutespray-output
 }
 
 function check_domain() {
