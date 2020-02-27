@@ -21,6 +21,8 @@ function get_nameserver() {
     then
         NAMESERVER_RECORD=$(echo $NAMESERVER_RECORD | sed 's/.$//')
         print_variable "Found nameserver record: " $NAMESERVER_RECORD
+        NAMESERVER_RECORD_IP=$(dig $NAMESERVER_RECORD +short)
+        print_variable "IP address is: " $NAMESERVER_RECORD_IP
     else
         print_variable "Error: Could not find nameserver record for domain" $domain
         echo "    Try 'dig ns" $domain"' to find possible clues."
@@ -107,6 +109,8 @@ function run_port_scans() {
 
     check_amplification_vulnerability 
 
+    check_for_rogue_server
+
     announce_port_scan "Brute force hostname guessing."
     run_port_scan -sn "--script dns-brute" $target
 
@@ -117,6 +121,46 @@ function run_port_scans() {
 function check_amplification_vulnerability() {
     announce_port_scan "Checking for DNS amplification vulnerability of "$NAMESERVER_RECORD
     dig . NS @$NAMESERVER_RECORD | sed s/^[\;].*$// | sed /^$/d
+}
+
+function check_for_rogue_server() {
+    announce_port_scan "Checking rogue nameserver for IP address: ""$NAMESERVER_RECORD_IP"
+
+    local ip_to_be_analyzed=$NAMESERVER_RECORD_IP
+    local ip_segments=(${NAMESERVER_RECORD_IP//./ })
+
+    case ${ip_segments[0]} in
+    64*)
+        if [ ${ip_prefix[1]} -eq 28 ]; then
+            print_variable "Found suspicious nameserver with IP address" "$NAMESERVER_RECORD_IP"
+        fi
+        ;;
+    67*)
+        if [ ${ip_prefix[1]} -eq 210 ]; then
+            print_variable "Found suspicious nameserver with IP address" "$NAMESERVER_RECORD_IP"
+        fi
+        ;;
+    77*)
+        if [ ${ip_prefix[1]} -eq 67 ]; then
+            print_variable "Found suspicious nameserver with IP address" "$NAMESERVER_RECORD_IP"
+        fi
+        ;;
+    85*)
+        if [ ${ip_prefix[1]} -eq 255 ]; then
+            print_variable "Found suspicious nameserver with IP address" "$NAMESERVER_RECORD_IP"
+        fi
+        ;;
+    93*)
+        if [ ${ip_prefix[1]} -eq 188 ]; then
+            print_variable "Found suspicious nameserver with IP address" "$NAMESERVER_RECORD_IP"
+        fi
+        ;;
+    213*)
+        if [ ${ip_prefix[1]} -eq 109 ]; then
+            print_variable "Found suspicious nameserver with IP address" "$NAMESERVER_RECORD_IP"
+        fi
+        ;;
+    esac
 }
 
 function clean_up() {

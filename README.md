@@ -83,6 +83,9 @@ Reports anomaluos results performing a so-called "forward-confirmed reverse DNS 
 ### Amplification vulnerability
 The nameserver might be vulnerable to a [denial of service attack](https://isc.sans.edu/diary/DNS+queries+for+/5713). This is the case if this check generates substantial output. If you find something, you might verify using the online tool given in above reference.
 
+### Check for rogue nameserver
+There is a list of rogue nameservers published by the [FBI](https://fbi.gov/dns-changer-malware.pdf). If parts of the nameserver's IP address point to one of the subnets listed in the publication, an alert is raised.
+
 ### dns-brute
 Enumerates hostnames by guessing subdomain names.
 
