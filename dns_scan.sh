@@ -78,7 +78,7 @@ function run_port_scans() {
     local domain=$1
     local target=$NAMESERVER_RECORD
     local dns_fuzzing_timelimit=5m
-    local enum_script_arguments="dns-srv-enum.DOMAIN="$domain
+    local enum_script_arguments="dns-srv-enum.domain='"$domain"'"
     local dns_fuzz_arguments="timelimit="$dns_fuzzing_timelimit
     local dns_update_arguments="dns-update.hostname=dnswizard.com,dns-update.ip=192.0.2.1"
     local port=53
@@ -102,7 +102,7 @@ function run_port_scans() {
     run_port_scan -sSU "--script=dns-zone-transfer.nse" $target "-p "$port
 
     announce_port_scan "Service enumeration."
-    run_port_scan -sSU "--script=dns-srv-enum --script-args "$enum_script_arguments $target "-p "$port
+    run_port_scan "" "--script=dns-srv-enum --script-args "$enum_script_arguments $target "-p "$port
 
     announce_port_scan "Forward-confirmed Reverse DNS lookup."
     run_port_scan "-sn -Pn" "--script fcrdns" $target
