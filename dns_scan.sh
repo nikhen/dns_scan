@@ -95,6 +95,9 @@ function run_port_scans() {
     announce_port_scan "Checking zeustracker."
     run_port_scan "-sn -PN" "--script=dns-zeustracker" $target
  
+    announce_port_scan "NSEC Enumeration."
+    run_port_scan -sU "--script=dns-nsec-enum" $domain "-p "$port
+
     announce_port_scan "NSEC3 Enumeration."
     run_port_scan -sU "--script=dns-nsec3-enum" $target "-p "$port
 
