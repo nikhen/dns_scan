@@ -66,6 +66,11 @@ function print_separator() {
     echo ""
 }
 
+function print_srv_records() {
+    print_variable "Retrieving SRV records for domain: " $domain
+    dig srv $domain +short
+}
+
 function run_port_scan() {
     if [ $VERBOSITY -gt 0 ]; then
         nmap $1 $2 $3 $4 -v
@@ -85,6 +90,8 @@ function run_port_scans() {
 
     print_variable "Fuzzing timelimit is set to" $dns_fuzzing_timelimit
     print_variable "Domain from input is" $domain
+
+    print_srv_records
 
     announce_port_scan "Obtaining nameserver identifier information."
     run_port_scan -sSU "--script dns-nsid.nse" $target "-p "$port
