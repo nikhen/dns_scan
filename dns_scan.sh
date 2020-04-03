@@ -1,14 +1,14 @@
 #!/bin/bash
 
 function print_usage_disclaimer() {
-        echo "" && echo "Usage:"
+        echo "dns_scan" && echo "" && echo "Usage:"
         echo "    bash dns_scan.sh [-d HOSTNAME] [-f FILE_LOCATION] [-m MAXIMUM_TARGETS] [-h]"
 	echo ""
         echo "    -d HOSTNAME: set hostname of single target"
         echo "    -f FILE_LOCATION: set location of a file containing additional hostnames (one per line)"
         echo "    -m MAXIMUM_TARGETS: set maximum number of targets (default: 1000)"
         echo "    -v: verbose output"
-        echo "    -h: show this help"
+        echo "    -h: show this help message and exit"
 }
 
 function get_nameserver() {
@@ -238,5 +238,9 @@ while getopts "d:f:m:hv" arg; do
   esac
 done
 
-# Call to main function
+if [ -z $DOMAIN ] && [ -z $INPUT_FILE_LOCATION ]; then
+    print_usage_disclaimer
+    exit 1
+fi
+
 main
